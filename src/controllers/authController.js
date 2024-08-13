@@ -1,4 +1,9 @@
-const { registerUser, authenticateUser } = require("../services/authServices");
+const {
+  registerUser,
+  authenticateUser,
+  updateUserProfile,
+  getUserProfile,
+} = require("../services/authServices");
 const User = require("../models/userModel");
 const Employee = require("../models/employerModel");
 const University = require("../models/universityModel");
@@ -95,4 +100,108 @@ const verifyAccountType = async (req, res) => {
   }
 };
 
-module.exports = { register, login, verifyAccountType };
+const getUser = async (req, res) => {
+  try {
+    const { userId, userType } = req;
+    console.log(userId, userType);
+    const userProfile = await getUserProfile(userId, userType);
+    console.log(userProfile);
+    res.json(userProfile);
+  } catch (error) {
+    console.log("this is error", error);
+    res.status(400).json({ message: error.message });
+  }
+};
+
+const updateUser = async (req, res) => {
+  try {
+    const { userId, userType } = req;
+    const updatedProfile = await updateUserProfile(userId, userType, req.body);
+    res.json(updatedProfile);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+};
+
+const changePassword = async (req, res) => {
+  try {
+    const { userId, userType } = req;
+    const { currentPassword, newPassword } = req.body;
+
+    let UserModel;
+    switch (userType) {
+      case "student":
+        UserModel = User;
+        break;
+      case "employer":
+        UserModel = Employee;
+        break;
+      case "university":
+        UserModel = University;
+        break;
+      default:
+        return res.status(400).json({ message: "Invalid user type" });
+    }
+
+    // Verify current password
+    const user = await UserModel.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const isMatch = await user.comparePassword(currentPassword);
+    if (!isMatch) {
+      return res.status(400).json({ message: "Current password is incorrect" });
+    }
+
+    // Check if new password is the same as the current password
+    const isSameAsCurrent = await user.comparePassword(newPassword);
+    if (isSameAsCurrent) {
+      return res
+        .status(400)
+        .json({
+          message: "New password cannot be the same as the current password",
+        });
+    }
+
+    // Validate new password
+    const passwordValidationErrors = validatePassword(newPassword);
+    if (passwordValidationErrors.length > 0) {
+      return res
+        .status(400)
+        .json({ message: passwordValidationErrors.join(", ") });
+    }
+
+    // Update password
+    user.password = newPassword;
+    await user.save();
+
+    res.json({ message: "Password changed successfully" });
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+};
+
+// Validate new password
+const validatePassword = (password) => {
+  const errors = [];
+  if (password.length < 6)
+    errors.push("Password must be at least 6 characters");
+  if (!/[A-Z]/.test(password))
+    errors.push("Password must include at least one uppercase letter");
+  if (!/[a-z]/.test(password))
+    errors.push("Password must include at least one lowercase letter");
+  if (!/\d/.test(password))
+    errors.push("Password must include at least one number");
+  if (!/[!@#$%^&*(),.?":{}|<>]/.test(password))
+    errors.push("Password must include at least one special character");
+  return errors;
+};
+module.exports = {
+  register,
+  login,
+  verifyAccountType,
+  getUser,
+  updateUser,
+  changePassword,
+};

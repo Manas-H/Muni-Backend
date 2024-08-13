@@ -13,6 +13,20 @@ const employeeSchema = new mongoose.Schema(
     password: { type: String, required: true },
     mobileNo: { type: String, required: true },
     type: { type: String, default: "employer" },
+    country: {
+      code: String,
+      name: String,
+    },
+    address: String,
+    zipCode: String,
+    city: String,
+    state: String,
+    description: String,
+    website: String,
+    linkedIn: String,
+    facebook: String,
+    twitter: String,
+    youtube: String,
   },
   { timestamps: true }
 );

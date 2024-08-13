@@ -61,9 +61,13 @@ const authenticateUser = async (email, password, type = null) => {
 
   const user = type ? users[userTypes.indexOf(type)] : validUserMatches[0];
   const ActualType = type || user.type;
-  const token = jwt.sign({ userId: user._id, ActualType }, process.env.JWT_SECRET, {
-    expiresIn: "5h",
-  });
+  const token = jwt.sign(
+    { userId: user._id, ActualType },
+    process.env.JWT_SECRET,
+    {
+      expiresIn: "5h",
+    }
+  );
 
   // console.log("token",token);
   // console.log("token",token);
@@ -71,4 +75,55 @@ const authenticateUser = async (email, password, type = null) => {
   return { user, token, type: ActualType };
 };
 
-module.exports = { registerUser, authenticateUser };
+const getUserProfile = async (userId, userType) => {
+  let UserModel;
+
+  switch (userType) {
+    case "student":
+      UserModel = User;
+      break;
+    case "employer":
+      UserModel = Employee;
+      break;
+    case "university":
+      UserModel = University;
+      break;
+    default:
+      throw new Error("Invalid user type");
+  }
+
+  const userProfile = await UserModel.findById(userId);
+  return userProfile;
+};
+
+const updateUserProfile = async (userId, userType, updatedData) => {
+  let UserModel;
+
+  switch (userType) {
+    case "student":
+      UserModel = User;
+      break;
+    case "employer":
+      UserModel = Employee;
+      break;
+    case "university":
+      UserModel = University;
+      break;
+    default:
+      throw new Error("Invalid user type");
+  }
+
+  const updatedProfile = await UserModel.findByIdAndUpdate(
+    userId,
+    updatedData,
+    { new: true }
+  );
+  return updatedProfile;
+};
+
+module.exports = {
+  registerUser,
+  authenticateUser,
+  getUserProfile,
+  updateUserProfile,
+};
